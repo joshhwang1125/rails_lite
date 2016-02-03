@@ -9,10 +9,11 @@ class ControllerBase
   attr_reader :req, :res, :params
 
   # Setup the controller
-  def initialize(req, res, params = {})
-    @params = params
+  def initialize(req, res, route_params = {})
     @req = req
     @res = res
+    @params = route_params.merge(req.params)
+    @already_built_response = false
   end
 
   # Helper method to alias @already_built_response
@@ -22,30 +23,32 @@ class ControllerBase
 
   # Set the res status code and header
   def redirect_to(url)
-    @res['location'] = url
-    @res.status = 302
-
     if already_built_response?
       raise "Already rendered :("
     else
       @already_built_response = true
     end
 
+    @res['location'] = url
+    @res.status = 302
+
     session.store_session(@res)
+
+    nil
   end
 
   # Populate the res with content.
   # Set the res's content type to the given type.
   # Raise an error if the developer tries to double render.
   def render_content(content, content_type)
-    @res['Content-Type'] = content_type.to_s
-    @res.write(content)
-
     if already_built_response?
       raise "Already rendered :("
     else
       @already_built_response = true
     end
+
+    @res['Content-Type'] = content_type.to_s
+    @res.write(content)
 
     session.store_session(@res)
   end
@@ -69,7 +72,7 @@ class ControllerBase
     self.send(name)
     render(name) unless already_built_response?
 
-    nil
+    # nil
   end
 end
 

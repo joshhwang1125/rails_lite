@@ -18,8 +18,13 @@ class Route
   # use pattern to pull out route params (save for later?)
   # instantiate controller and call controller action
   def run(req, res)
-    controller = @controller_class.new(req, res)
-    controller.invoke_action(@action)
+    match_data = @pattern.match(req.path)
+
+    route_params = Hash[match_data.names.zip(match_data.captures)]
+
+    @controller_class
+      .new(req, res, route_params)
+      .invoke_action(@action)
   end
 end
 
@@ -56,6 +61,12 @@ class Router
 
   # either throw 404 or call run on a matched route
   def run(req, res)
-    !!match(req) ? match(req).run(req, res) : res.status = 404
+    matching_route = match(req)
+
+    if matching_route.nil?
+      res.status = 404
+    else
+      matching_route.run(req, res)
+    end
   end
 end
